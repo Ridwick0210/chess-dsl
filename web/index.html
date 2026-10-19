@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChessScript Studio</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="app">
+    <header class="site-header">
+      <div class="brand"><span class="brand-icon" aria-hidden="true">♞</span><div><strong>ChessScript</strong><span>Compiler Studio</span></div></div>
+      <div class="header-note">Write a game. Compile it. Explore every position.</div>
+    </header>
+
+    <main>
+      <section class="workspace" aria-label="ChessScript workspace">
+        <div class="editor-card card">
+          <div class="card-header">
+            <div><span class="eyebrow">Source program</span><h1>Write your game</h1></div>
+            <button id="reset-sample" class="quiet-button" type="button">Load sample</button>
+          </div>
+          <div class="editor-wrap">
+            <div id="line-numbers" class="line-numbers" aria-hidden="true">1</div>
+            <textarea id="source" aria-label="ChessScript source code" spellcheck="false" autocomplete="off" autocapitalize="off"></textarea>
+          </div>
+          <div class="editor-footer">
+            <span id="source-note">Ready to compile</span>
+            <button id="run" class="run-button" type="button">▶ Compile &amp; run</button>
+          </div>
+          <div id="diagnostic" class="diagnostic" role="alert" hidden></div>
+          <p class="hint">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run. Errors point to their source line.</p>
+        </div>
+
+        <div class="board-card card">
+          <div class="card-header">
+            <div><span class="eyebrow">Visual execution</span><h2 id="game-title">Chess board</h2></div>
+            <span id="status-badge" class="status-badge" role="status" aria-live="polite">Initial position</span>
+          </div>
+          <div id="board" class="board" role="img" aria-label="Initial chess board"></div>
+          <div class="board-controls">
+            <button id="previous" type="button" aria-label="Previous move">← Previous</button>
+            <input id="position-slider" type="range" min="0" max="0" value="0" aria-label="Move position">
+            <button id="next" type="button" aria-label="Next move">Next →</button>
+          </div>
+          <div class="position-meta"><strong id="position-label">Starting position</strong><span id="turn-label">White to move</span></div>
+        </div>
+      </section>
+
+      <section class="details">
+        <div class="moves-card card">
+          <div class="section-heading"><div><span class="eyebrow">Game trace</span><h2>Moves</h2></div><span id="move-count">0 moves</span></div>
+          <ol id="moves" class="move-list"><li class="empty">Compile a program to see its moves.</li></ol>
+        </div>
+        <div class="pipeline-card card">
+          <div class="section-heading"><div><span class="eyebrow">Compiler internals</span><h2>Pipeline output</h2></div><span id="pipeline-count">—</span></div>
+          <div class="tabs" role="tablist" aria-label="Compiler output">
+            <button class="tab active" role="tab" aria-selected="true" data-tab="tokens" type="button">Tokens</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="ast" type="button">AST</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="symbols" type="button">Symbols</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="ir" type="button">Chess IR</button>
+          </div>
+          <pre id="pipeline-output" class="pipeline-output">Compile a program to inspect its stages.</pre>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
