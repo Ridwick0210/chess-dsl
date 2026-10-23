@@ -26,3 +26,11 @@ if(UNIX)
   add_test(NAME compiler_smoke COMMAND sh tests/smoke.sh $<TARGET_FILE:chessscript>)
   set_tests_properties(compiler_smoke PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif()
+
+find_package(Python3 COMPONENTS Interpreter)
+if(Python3_Interpreter_FOUND)
+  add_test(NAME compiler_inspection
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/compiler_inspection.py $<TARGET_FILE:chessscript>)
+  add_test(NAME end_to_end
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tests/end_to_end.py $<TARGET_FILE:chessscript>)
+endif()

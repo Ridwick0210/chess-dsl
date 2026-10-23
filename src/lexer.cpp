@@ -52,6 +52,10 @@ std::vector<Token> lex(const std::string& s) {
             std::string val; while(i<s.size() && std::isdigit(static_cast<unsigned char>(s[i]))) { val+=s[i]; advance(); }
             throw Diagnostic("LEXICAL",at,"malformed square or unexpected number '"+val+"'");
         }
+        // The language grammar is ASCII. Avoid placing a raw non-ASCII byte in
+        // a diagnostic, since the JSON interface must remain valid UTF-8.
+        if (static_cast<unsigned char>(c) >= 0x80)
+            throw Diagnostic("LEXICAL", at, "non-ASCII character outside a comment");
         throw Diagnostic("LEXICAL",at,"unexpected character '"+std::string(1,c)+"'");
     }
     out.push_back({TokenKind::End,"",{line,col}}); return out;

@@ -6,6 +6,10 @@
 
 namespace cs {
 namespace {
+std::string squareName(int index) {
+    return std::string(1, static_cast<char>('a' + index % 8))
+        + static_cast<char>('1' + index / 8);
+}
 int sq(const std::string& s) { return (s[1]-'1')*8+(s[0]-'a'); }
 bool white(Piece p) { return p>=Piece::WP && p<=Piece::WK; }
 bool black(Piece p) { return p>=Piece::BP && p<=Piece::BK; }
@@ -87,14 +91,16 @@ void applyMove(Board& board, const Instruction& instruction) {
     const Piece moving = board.cells[from], target = board.cells[to];
     const bool whiteTurn = board.whiteToMove;
     const bool capture = instruction.opcode == "CAPTURE";
-    const auto fail = [&](const std::string& reason) {
-        throw Diagnostic("SEMANTIC", instruction.where, reason);
+    const auto fail = [&](const std::string& reason, const std::vector<std::string>& squares = {}) {
+        Diagnostic error("SEMANTIC", instruction.where, reason);
+        error.squares = squares;
+        throw error;
     };
 
     if (moving == Piece::Empty) fail("no piece occupies " + instruction.a);
     if (white(moving) != whiteTurn)
         fail(std::string("wrong turn: ") + (whiteTurn ? "White" : "Black") + " to move");
-    if (same(moving, target)) fail("destination is occupied by a friendly piece");
+    if (same(moving, target)) fail("destination " + instruction.b + " is occupied by a friendly piece");
     if (isKing(target)) fail("a king cannot be captured; checkmate ends the game");
 
     const bool pawn = moving == Piece::WP || moving == Piece::BP;
@@ -114,6 +120,10 @@ void applyMove(Board& board, const Instruction& instruction) {
         const int direction = whiteTurn ? 1 : -1;
         const int startRank = whiteTurn ? 1 : 6;
         if (fileDelta == 0 && target == Piece::Empty) {
+            const int middle = (fromRank + direction) * 8 + fromFile;
+            if (rankDelta == 2 * direction && fromRank == startRank &&
+                board.cells[middle] != Piece::Empty)
+                fail("pawn path is blocked at " + squareName(middle), {squareName(middle)});
             legalShape = rankDelta == direction ||
                 (rankDelta == 2 * direction && fromRank == startRank &&
                  board.cells[(fromRank + direction) * 8 + fromFile] == Piece::Empty);
@@ -141,15 +151,24 @@ void applyMove(Board& board, const Instruction& instruction) {
             legalShape = true;
             while (rank != toRank || file != toFile) {
                 if (board.cells[rank * 8 + file] != Piece::Empty) {
-                    legalShape = false;
-                    break;
+                    fail("path from " + instruction.a + " to " + instruction.b +
+                         " is blocked at " + squareName(rank * 8 + file), {squareName(rank * 8 + file)});
                 }
                 rank += rankStep;
                 file += fileStep;
             }
         }
     }
-    if (!legalShape) fail("piece cannot make that move under chess movement rules");
+    if (!legalShape) {
+        std::string rule;
+        if (pawn) rule = "pawns advance one square (two from their starting rank on a clear path) and capture one square diagonally forward";
+        else if (moving == Piece::WN || moving == Piece::BN) rule = "knights move two squares on one axis and one on the other";
+        else if (isKing(moving)) rule = "kings move one square; use castle for castling";
+        else if (moving == Piece::WB || moving == Piece::BB) rule = "bishops move diagonally";
+        else if (moving == Piece::WR || moving == Piece::BR) rule = "rooks move along a rank or file";
+        else rule = "queens move along a rank, file, or diagonal";
+        fail("illegal move from " + instruction.a + " to " + instruction.b + ": " + rule);
+    }
 
     Board next = board;
     next.cells[to] = moving;
@@ -164,7 +183,7 @@ void applyMove(Board& board, const Instruction& instruction) {
     next.whiteToMove = !whiteTurn;
     const int king = findKing(next, whiteTurn);
     if (king >= 0 && attacked(next, king, !whiteTurn))
-        fail("move leaves the moving side's king in check");
+        fail("move leaves the moving side's king in check at " + squareName(king), {squareName(king)});
     board = next;
 }
 
@@ -177,8 +196,10 @@ void castle(Board& board, const Instruction& instruction) {
     const int transit = king + (kingSide ? 1 : -1);
     const int destination = rank * 8 + (kingSide ? 6 : 2);
     const int rookDestination = rank * 8 + (kingSide ? 5 : 3);
-    const auto fail = [&](const std::string& reason) {
-        throw Diagnostic("SEMANTIC", instruction.where, reason);
+    const auto fail = [&](const std::string& reason, const std::vector<std::string>& squares = {}) {
+        Diagnostic error("SEMANTIC", instruction.where, reason);
+        error.squares = squares;
+        throw error;
     };
     const bool right = whiteTurn
         ? (kingSide ? board.whiteKingCastle : board.whiteQueenCastle)
@@ -189,15 +210,15 @@ void castle(Board& board, const Instruction& instruction) {
         fail("king or rook is not on its castling square");
 
     for (int square = std::min(king, rook) + 1; square < std::max(king, rook); ++square)
-        if (board.cells[square] != Piece::Empty) fail("pieces block castling");
+        if (board.cells[square] != Piece::Empty) fail("pieces block castling at " + squareName(square), {squareName(square)});
     if (attacked(board, king, !whiteTurn))
-        fail("king cannot castle out of check");
+        fail("king cannot castle out of check at " + squareName(king), {squareName(king)});
 
     Board through = board;
     through.cells[transit] = through.cells[king];
     through.cells[king] = Piece::Empty;
     if (attacked(through, transit, !whiteTurn))
-        fail("king cannot castle through check");
+        fail("king cannot castle through check at " + squareName(transit), {squareName(transit)});
 
     Board next = board;
     next.cells[destination] = next.cells[king];
@@ -205,7 +226,7 @@ void castle(Board& board, const Instruction& instruction) {
     next.cells[rookDestination] = next.cells[rook];
     next.cells[rook] = Piece::Empty;
     if (attacked(next, destination, !whiteTurn))
-        fail("king cannot castle into check");
+        fail("king cannot castle into check at " + squareName(destination), {squareName(destination)});
     if (whiteTurn) next.whiteKingCastle = next.whiteQueenCastle = false;
     else next.blackKingCastle = next.blackQueenCastle = false;
     next.enPassant.reset();
@@ -297,11 +318,6 @@ void applyStatement(Board& board, const Statement& statement) {
 }
 
 namespace {
-std::string squareName(int index) {
-    return std::string(1, static_cast<char>('a' + index % 8))
-        + static_cast<char>('1' + index / 8);
-}
-
 bool hasLegalMove(const Board& board) {
     for (int from = 0; from < 64; ++from) {
         const Piece moving = board.cells[from];

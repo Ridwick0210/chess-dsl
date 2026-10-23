@@ -13,7 +13,20 @@ make serve
 
 Open **http://127.0.0.1:8765** in a browser. The sample game loads automatically. Edit the source and click **Compile & run**, or press **Ctrl+Enter**. Compiler errors identify their category, line, and column and select the source location. The board shows chess pieces, the move sequence, and check, checkmate, or stalemate status. Use the move list, slider, or Previous/Next buttons to review each position.
 
-Stop the server with **Ctrl+C**. It binds to `127.0.0.1` and does not require an internet connection.
+Stop the server with **Ctrl+C**. It binds to `127.0.0.1` and does not require an internet connection. The Studio accepts UTF-8 source up to 64 KiB and reports an input error for invalid encoding or oversized submissions.
+
+## Inspecting compilation and errors
+
+- Selecting a move highlights its source line, changed board squares, and exact instruction range in **Chess IR**. Click an IR row to select its move. State details show turn, castling rights, en passant, and clock changes.
+- **Expansions** shows each opening use, its definition, and its validated actions. Definition/use links select source locations; clicking a compiled `use` statement in the editor opens its expansion. Repeated uses remain separate.
+- Recoverable statement syntax errors are reported together. Click any diagnostic to select its source line. Lexical errors and unrecoverable header errors still stop collection; invalid syntax never runs.
+- An illegal move displays the board immediately before failure as a **diagnostic preview** of the valid prefix. Red outlines identify attempted/relevant squares; error text explains blocked paths, piece movement, or king safety. Errors within an opening include its use location. Compilation still fails and later actions are not executed.
+- Unused openings produce non-fatal warnings. Undefined opening names may include an unambiguous spelling suggestion, but remain errors.
+- Editing the source clears old results so source links never point into a changed program. Recompile to inspect the updated source.
+
+Paste `examples/inspection_demo.chs` into the Studio for a compact demonstration of expansions and warnings. The standalone HTML viewer keeps its existing replay controls; these new inspection controls are in the Studio.
+
+See [the detailed implementation plan](docs/IMPLEMENTATION_PLAN.md) for implementation steps, acceptance criteria, verification commands, a review demonstration, and remaining submission work.
 
 ## Command line
 
@@ -24,7 +37,7 @@ Stop the server with **Ctrl+C**. It binds to `127.0.0.1` and does not require an
 make test
 ```
 
-Open `build/game.html` in a browser for a portable, standalone game viewer. `--no-run` suppresses board display but still performs semantic validation. `--json -` reads source from standard input and returns structured compiler output for the Studio.
+Open `build/game.html` in a browser for a portable, standalone game viewer. `--no-run` suppresses board display but still performs semantic validation. `--json -` reads source from standard input and returns structured compiler output for the Studio. `make test` runs smoke checks, direct chess-rule tests, compiler inspection checks, and end-to-end games covering castling, en passant, promotion, long programs, and the portable viewer.
 
 ## Language
 
@@ -79,5 +92,7 @@ The implementation is intentionally a handwritten lexer and recursive descent pa
 - `examples/`: working ChessScript programs.
 - `tests/`: compiler and chess-rule checks.
 - `docs/PROJECT_PLAN.md`: project objectives, architecture, progress, and limitations.
+- `docs/IMPLEMENTATION_PLAN.md`: detailed feature implementation, verification, and submission plan.
+- `tests/compiler_inspection.py`: diagnostic recovery, valid-prefix previews, source mapping, expansion, and warning regressions.
 
 The Makefile is the primary build route. CMake 3.16+ is also supported with `cmake -S . -B build && cmake --build build`.

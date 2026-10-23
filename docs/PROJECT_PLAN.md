@@ -1,4 +1,6 @@
-# ChessScript Project Plan and Phase 2 Progress
+# ChessScript Project Plan and Implementation Progress
+
+The detailed follow-up plan is in [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), updated 23 October 2026. It records the five completed compiler-inspection improvements, acceptance checks, and remaining submission work.
 
 ## Abstract and problem
 
@@ -28,7 +30,7 @@ source
   → CLI, standalone viewer, or local Studio
 ```
 
-The proposal listed Flex and Bison. This implementation uses a handwritten lexer and recursive descent parser in C++17 so that token locations, grammar choices, AST construction, and errors are explicit and individually explainable. The parser does not use a third-party chess library.
+The proposal listed Flex and Bison. The laboratory manual lists these tools as recommendations, not mandatory requirements. This implementation uses a handwritten lexer and recursive descent parser in C++17 so that token locations, grammar choices, AST construction, and errors are explicit and individually explainable. The parser does not use a third-party chess library.
 
 ## Technology stack
 
@@ -55,10 +57,10 @@ The Studio binds only to `127.0.0.1`, limits submitted source size, checks the r
 | Symbol table | Named opening definitions, use resolution, duplicate and undefined name errors. |
 | Semantic analysis | Validates board operations before IR is emitted; rejects play after the game ends. |
 | Chess IR and VM | Lowers validated moves to board operations and replays them into a position trace. |
-| Diagnostics | Category, source line, column, and reason; Studio selects the related source location. |
-| Presentation | Local editor, board with piece symbols, move navigation, and pipeline views. |
+| Diagnostics | Multiple recoverable syntax errors; contextual semantic previews, relevant squares, definition/use locations, unused-opening warnings, and spelling hints. |
+| Presentation | Synchronized source/IR/board stepping, state differences, opening expansion inspection, and clickable diagnostics. |
 
-The sample now performs Scholar's Mate and reports `Checkmate — White wins`. `examples/opening_demo.chs` demonstrates symbol resolution. `make test` checks compiler output and diagnostics plus castling, en passant, promotion by capture, and stalemate in controlled board positions. The standalone HTML viewer can be generated for a portable demonstration; the local Studio supports editing and rerunning programs.
+The sample now performs Scholar's Mate and reports `Checkmate — White wins`. `examples/opening_demo.chs` demonstrates symbol resolution. `make test` checks compiler output and diagnostics plus castling, en passant, promotion by capture, and stalemate in controlled board positions. The compiler inspection suite adds 12 checks for recovery, preview correctness, repeated-use mappings, warnings, and state metadata. The end-to-end suite adds full-game special-move checks, IR/VM trace agreement, input boundaries, and portable HTML generation. The standalone HTML viewer can be generated for a portable demonstration; the local Studio supports editing and rerunning programs.
 
 ## Review 2 demonstration
 

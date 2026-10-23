@@ -23,6 +23,37 @@ std::string quote(const std::string& value) {
     out << '"';
     return out.str();
 }
+std::string locationJson(Location where) {
+    return "{\"line\":" + std::to_string(where.line) +
+        ",\"column\":" + std::to_string(where.column) + "}";
+}
+std::string diagnosticJson(const Diagnostic& error) {
+    std::ostringstream out;
+    out << "{\"category\":" << quote(error.category)
+        << ",\"line\":" << error.where.line << ",\"column\":" << error.where.column
+        << ",\"message\":" << quote(error.detail)
+        << ",\"opening\":" << quote(error.opening)
+        << ",\"use\":" << (error.useWhere ? locationJson(*error.useWhere) : "null")
+        << ",\"squares\":[";
+    for (std::size_t i = 0; i < error.squares.size(); ++i) {
+        if (i) out << ',';
+        out << quote(error.squares[i]);
+    }
+    out << "]}";
+    return out.str();
+}
+std::string castlingRights(const Board& board) {
+    std::string rights;
+    if (board.whiteKingCastle) rights += 'K';
+    if (board.whiteQueenCastle) rights += 'Q';
+    if (board.blackKingCastle) rights += 'k';
+    if (board.blackQueenCastle) rights += 'q';
+    return rights.empty() ? "-" : rights;
+}
+std::string squareName(int index) {
+    return std::string(1, static_cast<char>('a' + index % 8))
+        + static_cast<char>('1' + index / 8);
+}
 std::string astStatement(const Statement& statement) {
     if (const auto* move = std::get_if<Move>(&statement))
         return "Move(" + move->from + ", " + move->to + ")";
@@ -77,7 +108,25 @@ std::string renderJson(const Compilation& compilation, const std::string& source
             << ",\"from\":" << quote(move.from)
             << ",\"to\":" << quote(move.to)
             << ",\"line\":" << move.where.line
-            << ",\"column\":" << move.where.column << '}';
+            << ",\"column\":" << move.where.column
+            << ",\"opening\":" << quote(move.opening)
+            << ",\"use\":" << (move.useWhere ? locationJson(*move.useWhere) : "null")
+            << ",\"irBegin\":" << move.irBegin << ",\"irEnd\":" << move.irEnd << '}';
+    }
+    out << "],\"warnings\":[";
+    for (std::size_t i = 0; i < compilation.warnings.size(); ++i) {
+        if (i) out << ',';
+        out << diagnosticJson(compilation.warnings[i]);
+    }
+    out << "],\"expansions\":[";
+    for (std::size_t i = 0; i < compilation.expansions.size(); ++i) {
+        if (i) out << ',';
+        const auto& expansion = compilation.expansions[i];
+        out << "{\"name\":" << quote(expansion.name)
+            << ",\"definition\":" << locationJson(expansion.definition)
+            << ",\"use\":" << locationJson(expansion.useWhere)
+            << ",\"firstMove\":" << expansion.firstMove
+            << ",\"moveCount\":" << expansion.moveCount << '}';
     }
     out << "],\"ir\":[";
     for (std::size_t i = 0; i < compilation.ir.size(); ++i) {
@@ -98,16 +147,26 @@ std::string renderJson(const Compilation& compilation, const std::string& source
             out << static_cast<int>(states[i].cells[square]);
         }
         out << "],\"turn\":" << quote(states[i].whiteToMove ? "White" : "Black")
-            << ",\"status\":" << quote(positionStatus(states[i])) << '}';
+            << ",\"status\":" << quote(positionStatus(states[i]))
+            << ",\"castling\":" << quote(castlingRights(states[i]))
+            << ",\"enPassant\":" << quote(states[i].enPassant ? squareName(*states[i].enPassant) : "-")
+            << ",\"halfmove\":" << states[i].halfmove
+            << ",\"fullmove\":" << states[i].fullmove << '}';
     }
     out << "]}";
     return out.str();
 }
 
-std::string renderErrorJson(const Diagnostic& error) {
-    return "{\"ok\":false,\"error\":{\"category\":" + quote(error.category)
-        + ",\"line\":" + std::to_string(error.where.line)
-        + ",\"column\":" + std::to_string(error.where.column)
-        + ",\"message\":" + quote(error.detail) + "}}";
+std::string renderErrorJson(const Diagnostic& error, const std::string& source) {
+    std::ostringstream out;
+    out << "{\"ok\":false,\"error\":" << diagnosticJson(error)
+        << ",\"errors\":[" << diagnosticJson(error);
+    for (const auto& additional : error.additional) out << ',' << diagnosticJson(additional);
+    out << ']';
+    if (error.partial) {
+        out << ",\"preview\":" << renderJson(*error.partial, source, executeTrace(error.partial->ir));
+    }
+    out << '}';
+    return out.str();
 }
 }

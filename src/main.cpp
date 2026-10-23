@@ -110,9 +110,10 @@ int main(int argc, char** argv) {
     }
 
     Options options;
+    std::string source;
     try {
         options = parseOptions(argc, argv);
-        const std::string source = readSource(options.sourcePath);
+        source = readSource(options.sourcePath);
         if (options.json) {
             const auto compilation = cs::compile(source);
             const auto states = cs::executeTrace(compilation.ir);
@@ -122,6 +123,9 @@ int main(int argc, char** argv) {
 
         if (options.tokens) printTokens(source);
         const auto compilation = cs::compile(source);
+        for (const auto& warning : compilation.warnings)
+            std::cerr << "WARNING at " << warning.where.line << ':' << warning.where.column
+                      << ": " << warning.detail << '\n';
         if (options.ast) printAst(compilation.ast);
         if (options.ir) printIr(compilation.ir);
         if (options.run || !options.htmlPath.empty()) {
@@ -141,8 +145,17 @@ int main(int argc, char** argv) {
             }
         }
     } catch (const cs::Diagnostic& error) {
-        if (options.json) std::cout << cs::renderErrorJson(error) << '\n';
-        else std::cerr << error.what() << '\n';
+        if (options.json) std::cout << cs::renderErrorJson(error, source) << '\n';
+        else {
+            std::cerr << error.what() << '\n';
+            for (const auto& additional : error.additional) std::cerr << additional.what() << '\n';
+            if (error.useWhere)
+                std::cerr << "Expanded from use " << error.opening << " at "
+                          << error.useWhere->line << ':' << error.useWhere->column << '\n';
+            if (error.partial)
+                std::cerr << "Position before the failing statement (diagnostic preview):\n"
+                          << cs::executeTrace(error.partial->ir).back().display() << '\n';
+        }
         return 1;
     } catch (const std::exception& error) {
         if (options.json)

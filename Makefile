@@ -16,6 +16,8 @@ build/chess_rules: tests/chess_rules.cpp src/chess.cpp src/lexer.cpp include/che
 test: build/chessscript build/chess_rules
 	sh tests/smoke.sh ./build/chessscript
 	./build/chess_rules
+	python3 tests/compiler_inspection.py ./build/chessscript
+	python3 tests/end_to_end.py ./build/chessscript
 
 serve: build/chessscript
 	python3 web/server.py

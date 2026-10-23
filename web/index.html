@@ -29,6 +29,7 @@
             <span id="source-note">Ready to compile</span>
             <button id="run" class="run-button" type="button">▶ Compile &amp; run</button>
           </div>
+          <div id="warnings" class="warnings" role="status" hidden></div>
           <div id="diagnostic" class="diagnostic" role="alert" hidden></div>
           <p class="hint">Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to run. Errors point to their source line.</p>
         </div>
@@ -44,6 +45,8 @@
             <input id="position-slider" type="range" min="0" max="0" value="0" aria-label="Move position">
             <button id="next" type="button" aria-label="Next move">Next →</button>
           </div>
+          <div id="state-details" class="state-details" aria-live="polite"></div>
+          <button id="source-link" class="source-link" type="button" hidden>Show source statement</button>
           <div class="position-meta"><strong id="position-label">Starting position</strong><span id="turn-label">White to move</span></div>
         </div>
       </section>
@@ -59,9 +62,10 @@
             <button class="tab active" role="tab" aria-selected="true" data-tab="tokens" type="button">Tokens</button>
             <button class="tab" role="tab" aria-selected="false" data-tab="ast" type="button">AST</button>
             <button class="tab" role="tab" aria-selected="false" data-tab="symbols" type="button">Symbols</button>
+            <button class="tab" role="tab" aria-selected="false" data-tab="expansions" type="button">Expansions</button>
             <button class="tab" role="tab" aria-selected="false" data-tab="ir" type="button">Chess IR</button>
           </div>
-          <pre id="pipeline-output" class="pipeline-output">Compile a program to inspect its stages.</pre>
+          <div id="pipeline-output" class="pipeline-output" role="region" aria-label="Selected compiler stage">Compile a program to inspect its stages.</div>
         </div>
       </section>
     </main>

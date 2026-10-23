@@ -3,6 +3,7 @@
 #include <array>
 #include <cstddef>
 #include <map>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -11,10 +12,16 @@
 
 namespace cs {
 struct Location { int line = 1, column = 1; };
+struct Compilation;
 struct Diagnostic : std::runtime_error {
     std::string category;
     std::string detail;
     Location where;
+    std::vector<Diagnostic> additional;
+    std::optional<Location> useWhere;
+    std::string opening;
+    std::vector<std::string> squares;
+    std::shared_ptr<Compilation> partial;
     Diagnostic(std::string category, Location where, const std::string& message);
 };
 
@@ -47,14 +54,32 @@ struct Board {
 };
 
 struct Instruction { std::string opcode, a, b, c; Location where; };
-struct MoveInfo { std::string label, from, to; Location where; };
-struct Compilation { Program ast; std::map<std::string, Opening> symbols; std::vector<Instruction> ir; std::vector<MoveInfo> moves; };
+struct MoveInfo {
+    std::string label, from, to;
+    Location where;
+    std::string opening;
+    std::optional<Location> useWhere;
+    std::size_t irBegin = 0, irEnd = 0; // Half-open instruction range.
+};
+struct Expansion {
+    std::string name;
+    Location definition, useWhere;
+    std::size_t firstMove = 0, moveCount = 0;
+};
+struct Compilation {
+    Program ast;
+    std::map<std::string, Opening> symbols;
+    std::vector<Instruction> ir;
+    std::vector<MoveInfo> moves;
+    std::vector<Expansion> expansions;
+    std::vector<Diagnostic> warnings;
+};
 Compilation compile(const std::string& source);
 Board execute(const std::vector<Instruction>& ir, bool verbose = false);
 std::vector<Board> executeTrace(const std::vector<Instruction>& ir);
 std::string renderHtml(const Compilation& compilation, const std::string& source, const std::vector<Board>& states);
 std::string renderJson(const Compilation& compilation, const std::string& source, const std::vector<Board>& states);
-std::string renderErrorJson(const Diagnostic& error);
+std::string renderErrorJson(const Diagnostic& error, const std::string& source = "");
 void applyStatement(Board& board, const Statement& statement);
 std::string positionStatus(const Board& board);
 std::string tokenName(TokenKind kind);

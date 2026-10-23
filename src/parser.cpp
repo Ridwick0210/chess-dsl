@@ -8,16 +8,26 @@ public:
 
     Program program() {
         Program result;
+        try { result = programBody(); }
+        catch (const Diagnostic& error) { errors_.push_back(error); }
+        if (!errors_.empty()) {
+            Diagnostic error = errors_.front();
+            error.additional.assign(errors_.begin() + 1, errors_.end());
+            throw error;
+        }
+        return result;
+    }
+
+private:
+    std::vector<Diagnostic> errors_;
+    Program programBody() {
+        Program result;
         while (peek().kind == TokenKind::Opening) {
             take();
             Token name = expect(TokenKind::Identifier, "an opening name");
             expect(TokenKind::LBrace, "'{' after opening name");
             Opening opening{name.text, name.where, {}};
-            while (peek().kind != TokenKind::RBrace) {
-                requireBlockEnd();
-                opening.statements.push_back(statement(false));
-            }
-            take();
+            block(opening.statements, false);
             result.openings.push_back(std::move(opening));
         }
 
@@ -25,11 +35,7 @@ public:
         Token name = expect(TokenKind::Identifier, "a game name");
         expect(TokenKind::LBrace, "'{' after game name");
         result.game = Game{name.text, name.where, {}};
-        while (peek().kind != TokenKind::RBrace) {
-            requireBlockEnd();
-            result.game.statements.push_back(statement(true));
-        }
-        take();
+        block(result.game.statements, true);
         expect(TokenKind::End, "end of file");
         return result;
     }
@@ -49,9 +55,31 @@ private:
         return take();
     }
 
-    void requireBlockEnd() const {
-        if (peek().kind == TokenKind::End)
-            throw Diagnostic("SYNTAX", peek().where, "expected '}' to close block");
+    bool statementStart() const {
+        const auto kind = peek().kind;
+        return kind == TokenKind::Move || kind == TokenKind::Capture ||
+            kind == TokenKind::Castle || kind == TokenKind::Promote || kind == TokenKind::Use;
+    }
+
+    void block(std::vector<Statement>& statements, bool allowUse) {
+        while (peek().kind != TokenKind::RBrace) {
+            if (peek().kind == TokenKind::End || peek().kind == TokenKind::Opening ||
+                peek().kind == TokenKind::Game) {
+                errors_.emplace_back("SYNTAX", peek().where, "expected '}' to close block");
+                return;
+            }
+            try { statements.push_back(statement(allowUse)); }
+            catch (const Diagnostic& error) {
+                errors_.push_back(error);
+                if (errors_.size() >= 50) return; // Bound noisy input and recovery work.
+                // Keep the next statement starter when a semicolon was omitted.
+                while (peek().kind != TokenKind::Semicolon && peek().kind != TokenKind::RBrace &&
+                       peek().kind != TokenKind::End && peek().kind != TokenKind::Game &&
+                       peek().kind != TokenKind::Opening && !statementStart()) take();
+                if (peek().kind == TokenKind::Semicolon) take();
+            }
+        }
+        take();
     }
 
     Statement statement(bool allowUse) {

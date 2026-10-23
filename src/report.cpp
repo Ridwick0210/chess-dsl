@@ -43,7 +43,7 @@ h1 { font-size:clamp(28px,4vw,42px); letter-spacing:-.045em; line-height:1.08; m
 .board-heading { display:flex; justify-content:space-between; align-items:baseline; gap:16px; margin-bottom:15px; }
 .board-heading h2 { font-size:20px; letter-spacing:-.02em; margin:0; }
 .status { color:var(--muted); font-size:14px; font-weight:600; text-align:right; }
-.board { width:min(100%,580px); aspect-ratio:1; margin:auto; display:grid; grid-template-columns:repeat(8,1fr); border:1px solid #547766; border-radius:8px; overflow:hidden; box-shadow:0 9px 18px rgba(20,42,33,.16); }
+.board { width:min(100%,580px); aspect-ratio:1; margin:auto; display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); grid-template-rows:repeat(8,minmax(0,1fr)); border:1px solid #547766; border-radius:8px; overflow:hidden; box-shadow:0 9px 18px rgba(20,42,33,.16); }
 .square { position:relative; display:grid; place-items:center; min-width:0; }
 .square.light { background:var(--light); } .square.dark { background:var(--dark); }
 .square.from::after,.square.to::after { content:""; position:absolute; inset:3px; border:4px solid #e9a72d; border-radius:4px; pointer-events:none; }

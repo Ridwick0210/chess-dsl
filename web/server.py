@@ -55,6 +55,18 @@ class Handler(BaseHTTPRequestHandler):
             return
         source = self.rfile.read(length)
         try:
+            source.decode("utf-8")
+        except UnicodeDecodeError:
+            payload = json.dumps({
+                "ok": False,
+                "error": {
+                    "category": "LEXICAL",
+                    "message": "Source must be valid UTF-8 text",
+                },
+            }).encode("utf-8")
+            self.send_bytes(400, "application/json; charset=utf-8", payload)
+            return
+        try:
             completed = subprocess.run(
                 [str(BINARY), "--json", "-"],
                 input=source,
